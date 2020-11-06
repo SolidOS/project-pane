@@ -3,8 +3,6 @@
  **  Putting together some of the tools we have to manage a Project
  */
 
-// const VideoRoomPrefix = 'https://appear.in/'
-
 const UI = require('solid-ui')
 const ns = UI.ns
 const $rdf = require('rdflib')
@@ -21,7 +19,7 @@ module.exports = {
   label: function (subject, context) {
     var kb = context.session.store
     var ns = UI.ns
-    if (kb.holds(subject, ns.rdf('type'), ns.project('Project'))) {
+    if (kb.holds(subject, ns.rdf('type'), ns.meeting('Project'))) {
       return 'Project'
     }
     return null // Suppress pane otherwise
@@ -32,7 +30,7 @@ module.exports = {
   //  returns: A promise of a project object
   //
 
-  mintClass: UI.ns.project('Project'),
+  mintClass: UI.ns.meeting('Project'),
 
   mintNew: function (context, options) {
     return new Promise(function (resolve, reject) {
@@ -49,16 +47,16 @@ module.exports = {
         kb.add(project, ns.dc('author'), me, projectDoc)
       }
 
-      kb.add(project, ns.rdf('type'), ns.project('Project'), projectDoc)
+      kb.add(project, ns.rdf('type'), ns.meeting('Project'), projectDoc)
       kb.add(project, ns.dc('created'), new Date(), projectDoc)
       kb.add(
         project,
         ns.ui('backgroundColor'),
-        new $rdf.Literal('#ddddcc', undefined, ns.xsd('color')),
+        new $rdf.Literal('#ccccdd', undefined, ns.xsd('color')),
         projectDoc
       )
       var toolList = new $rdf.Collection()
-      kb.add(project, ns.project('toolList'), toolList, projectDoc)
+      kb.add(project, ns.meeting('toolList'), toolList, projectDoc)
 
       toolList.elements.push(project) // Add the project itself - see renderMain()
 
@@ -139,7 +137,7 @@ module.exports = {
       if (pred) {
         kb.add(project, pred, thing, appDoc) // Specific Link back to project
       }
-      kb.add(thing, ns.project('parentProject'), project, appDoc) // Generic link back to project
+      kb.add(thing, ns.meeting('parentProject'), project, appDoc) // Generic link back to project
       updater.put(
         appDoc,
         kb.statementsMatching(undefined, undefined, undefined, appDoc),
@@ -160,29 +158,12 @@ module.exports = {
       }
       var x = UI.widgets.newThing(projectDoc)
       if (label) kb.add(x, ns.rdfs('label'), label, projectDoc)
-      if (iconURI) kb.add(x, ns.project('icon'), kb.sym(iconURI), projectDoc)
-      kb.add(x, ns.rdf('type'), ns.project('Tool'), projectDoc)
-      kb.add(x, ns.project('target'), target, projectDoc)
-      var toolList = kb.the(project, ns.project('toolList'))
+      if (iconURI) kb.add(x, ns.meeting('icon'), kb.sym(iconURI), projectDoc)
+      kb.add(x, ns.rdf('type'), ns.meeting('Tool'), projectDoc)
+      kb.add(x, ns.meeting('target'), target, projectDoc)
+      var toolList = kb.the(project, ns.meeting('toolList'))
       toolList.elements.push(x)
       return x
-    }
-
-    // Map from end-user non-iframeable Google maps URI to G Maps API
-    // Input: like https://www.google.co.uk/maps/place/Mastercard/@53.2717971,-6.2042699,17z/...
-    // Output:
-    function googleMapsSpecial (page) {
-      const initialPrefix = /https:\/\/www\.google\..*\/maps\//
-      const finalPrefix = 'https://www.google.com/maps/embed/v1/'
-      const myPersonalApiKEY = 'AIzaSyB8aaT6bY9tcLCmc2oPCkdUYLmTOWM8R54' // Get your own key!
-      // GET YOUR KEY AT https://developers.google.com/maps/documentation/javascript/
-      const uri = page.uri
-      if (!uri.match(initialPrefix)) return page
-      if (uri.startsWith(finalPrefix)) return page // Already done
-      const map =
-        uri.replace(initialPrefix, finalPrefix) + '&key=' + myPersonalApiKEY
-      console.log('Converted Google Map URI! ' + map)
-      return $rdf.sym(map)
     }
 
     // ////////////////////  DRAG and Drop
@@ -199,7 +180,7 @@ module.exports = {
             UI.utils.label(target),
             null
           )
-          kb.add(tool, UI.ns.project('view'), 'iframe', projectDoc)
+          kb.add(tool, UI.ns.meeting('view'), 'iframe', projectDoc)
         }
 
         var addLink = function (target) {
@@ -213,7 +194,7 @@ module.exports = {
           var newPaneOptions = {
             newInstance: subject, // kb.sym(subject.doc().uri + '#LinkListTool'),
             pane: dataBrowserContext.session.paneRegistry.byName('link'), // the pane to be used to mint a new thing
-            predicate: ns.project('attachmentTool'),
+            predicate: ns.meeting('attachmentTool'),
             tabTitle: 'Links',
             view: 'link', // The pane to be used when it is viewed
             noIndexHTML: true
@@ -226,7 +207,7 @@ module.exports = {
         var addParticipant = function (target) {
           var pref = kb.any(target, ns.foaf('preferredURI'))
           var obj = pref ? kb.sym(pref) : target
-          var group = kb.any(project, ns.project('attendeeGroup'))
+          var group = kb.any(project, ns.meeting('attendeeGroup'))
           var addPersonToGroup = function (obj, group) {
             var ins = [
               $rdf.st(group, UI.ns.vcard('hasMember'), obj, group.doc())
@@ -280,7 +261,6 @@ module.exports = {
         }
         kb.fetcher.nowOrWhenFetched(target, function (ok, mess) {
           function addAttachmentTab (target) {
-            target = googleMapsSpecial(target)
             console.log('make web page attachement tab ' + target) // icon was: UI.icons.iconBase + 'noun_25830.svg'
             var tool = makeToolNode(
               target,
@@ -288,7 +268,7 @@ module.exports = {
               UI.utils.label(target),
               null
             )
-            kb.add(tool, UI.ns.project('view'), 'iframe', projectDoc)
+            kb.add(tool, UI.ns.meeting('view'), 'iframe', projectDoc)
             return resolve(target)
           }
           if (!ok) {
@@ -331,7 +311,6 @@ module.exports = {
                 }
               }
               if (ok2) {
-                target = googleMapsSpecial(target) // tweak Google maps to embed OK
                 addIframeTool(target) // Something we can maybe iframe
                 return resolve(target)
               }
@@ -376,7 +355,7 @@ module.exports = {
     var makeGroup = function (_toolObject) {
       var newBase = projectBase + 'Group/'
       var kb = dataBrowserContext.session.store
-      var group = kb.any(project, ns.project('particpants'))
+      var group = kb.any(project, ns.meeting('particpants'))
       if (!group) {
         group = $rdf.sym(newBase + 'index.ttl#this')
       }
@@ -384,50 +363,21 @@ module.exports = {
 
       var tool = makeToolNode(
         group,
-        ns.project('particpants'),
+        ns.meeting('particpants'),
         'Particpants',
         UI.icons.iconBase + 'noun_339237.svg'
       ) // group: noun_339237.svg  'noun_15695.svg'
-      kb.add(tool, UI.ns.project('view'), 'peoplePicker', projectDoc)
+      kb.add(tool, UI.ns.meeting('view'), 'peoplePicker', projectDoc)
       saveBackProjectDoc()
     }
-    /*
-    var makeAddressBook = function (toolObject) {
-      var newBase = projectBase + 'Group/'
-      var kb = UI.store
-      var group = kb.any(project, ns.project('addressBook'))
-      if (!group) {
-        group = $rdf.sym(newBase + 'index.ttl#this')
-      }
 
-      // Create a tab for the addressbook
-      var div = dom.createElement('div')
-      var context = { dom: dom, div: div }
-      var book
-      UI.authn.findAppInstances(context, ns.vcard('AddressBook')).then(
-        function (context) {
-          if (context.instances.length === 0) {
-            complain('You have no solid address book. It is really handy to have one to keep track of people and groups')
-          } else if (context.instances.length > 1) {
-            var s = context.instances.map(function (x) { return '' + x }).join(', ')
-            complain('You have more than one solid address book: ' + s + ' Not supported yet.')
-          } else { // addressbook
-            book = context.instances[0]
-            var tool = makeToolNode(book, ns.project('addressBook'), 'Address Book', UI.icons.iconBase + 'noun_15695.svg') // group: noun_339237.svg
-            kb.add(tool, UI.ns.project('view'), 'contact', projectDoc)
-            saveBackProjectDoc()
-          }
-        }
-      )
-    }
-    */
     var makePoll = function (toolObject) {
       var newPaneOptions = {
         useExisting: project, // Regard the project as being the schedulable event itself.
         // newInstance: project,
         pane: dataBrowserContext.session.paneRegistry.byName('schedule'),
         view: 'schedule',
-        // predicate: ns.project('schedulingPoll'),
+        // predicate: ns.meeting('schedulingPoll'),
         // newBase: projectBase + 'Schedule/',   Not needed as uses existing project
         tabTitle: 'Schedule poll',
         noIndexHTML: true
@@ -444,7 +394,7 @@ module.exports = {
       var newPaneOptions = {
         newInstance: kb.sym(project.dir().uri + folderName + '/'),
         pane: dataBrowserContext.session.paneRegistry.byName('folder'), // @@ slideshow??
-        predicate: ns.project('pictures'),
+        predicate: ns.meeting('pictures'),
         shareTab: true,
         tabTitle: folderName,
         view: 'slideshow',
@@ -462,7 +412,7 @@ module.exports = {
       var options = {
         newInstance: kb.sym(project.dir().uri + 'Files/'),
         pane: dataBrowserContext.session.paneRegistry.byName('folder'),
-        predicate: ns.project('materialsFolder'),
+        predicate: ns.meeting('materialsFolder'),
         tabTitle: 'Materials',
         noIndexHTML: true
       }
@@ -478,7 +428,7 @@ module.exports = {
       var options = {
         newInstance: kb.sym(project.dir().uri + 'Attendees/index.ttl#this'),
         pane: dataBrowserContext.session.paneRegistry.byName('contact'),
-        predicate: ns.project('attendeeGroup'),
+        predicate: ns.meeting('attendeeGroup'),
         tabTitle: 'Attendees',
         instanceClass: ns.vcard('Group'),
         instanceName: UI.utils.label(subject) + ' attendees',
@@ -493,7 +443,7 @@ module.exports = {
     var makePad = function (toolObject) {
       var newPaneOptions = {
         newBase: projectBase + 'SharedNotes/',
-        predicate: UI.ns.project('sharedNotes'),
+        predicate: UI.ns.meeting('sharedNotes'),
         tabTitle: 'Shared Notes',
         pane: dataBrowserContext.session.paneRegistry.byName('pad')
       }
@@ -509,7 +459,7 @@ module.exports = {
           kb,
           parameterCell,
           ns.foaf('name'),
-          UI.ns.project('Project')
+          UI.ns.meeting('Project')
         )
         .then(function (name) {
           if (!name) {
@@ -518,7 +468,7 @@ module.exports = {
           var URIsegment = encodeURIComponent(name)
           var options = {
             newBase: projectBase + URIsegment + '/', // @@@ sanitize
-            predicate: UI.ns.project('subProject'),
+            predicate: UI.ns.meeting('subProject'),
             tabTitle: name,
             pane: dataBrowserContext.session.paneRegistry.byName('project')
           }
@@ -589,7 +539,7 @@ module.exports = {
               options.pane.icon
             )
             if (options.view) {
-              kb.add(tool, UI.ns.project('view'), options.view, projectDoc)
+              kb.add(tool, UI.ns.meeting('view'), options.view, projectDoc)
             }
             saveBackProjectDoc()
             kb.fetcher
@@ -615,7 +565,7 @@ module.exports = {
     var makeActions = function (_toolObject) {
       var newBase = projectBase + 'Actions/'
       var kb = dataBrowserContext.session.store
-      if (kb.holds(project, ns.project('actions'))) {
+      if (kb.holds(project, ns.meeting('actions'))) {
         console.log('Ignored - already have actions')
         return // already got one
       }
@@ -640,58 +590,58 @@ module.exports = {
       kb.add(newInstance, ns.rdf('type'), ns.wf('Tracker'), appDoc)
       var tool = makeToolNode(
         newInstance,
-        ns.project('actions'),
+        ns.meeting('actions'),
         'Actions',
         UI.icons.iconBase + 'noun_17020.svg'
       )
       saveAppDocumentLinkAndAddNewThing(
         tool,
         newInstance,
-        ns.project('actions')
+        ns.meeting('actions')
       )
     }
 
     var makeChat = function (_toolObject) {
       var newBase = projectBase + 'Chat/'
       var kb = dataBrowserContext.session.store
-      if (kb.holds(project, ns.project('chat'))) {
+      if (kb.holds(project, ns.meeting('chat'))) {
         console.log('Ignored - already have chat')
         return // already got one
       }
       var messageStore = kb.sym(newBase + 'chat.ttl')
 
-      kb.add(messageStore, ns.rdf('type'), ns.project('Chat'), messageStore)
+      kb.add(messageStore, ns.rdf('type'), ns.meeting('Chat'), messageStore)
 
       var tool = makeToolNode(
         messageStore,
-        ns.project('chat'),
+        ns.meeting('chat'),
         'Chat',
         UI.icons.iconBase + 'noun_346319.svg'
       )
-      saveAppDocumentLinkAndAddNewThing(tool, messageStore, ns.project('chat'))
+      saveAppDocumentLinkAndAddNewThing(tool, messageStore, ns.meeting('chat'))
     }
 
     var makeVideoCall = function (_toolObject) {
       var kb = dataBrowserContext.session.store
       var newInstance = $rdf.sym(VideoRoomPrefix + UI.utils.genUuid())
 
-      if (kb.holds(project, ns.project('videoCallPage'))) {
+      if (kb.holds(project, ns.meeting('videoCallPage'))) {
         console.log('Ignored - already have a videoCallPage')
         return // already got one
       }
       kb.add(
         newInstance,
         ns.rdf('type'),
-        ns.project('VideoCallPage'),
+        ns.meeting('VideoCallPage'),
         projectDoc
       )
       var tool = makeToolNode(
         newInstance,
-        ns.project('videoCallPage'),
+        ns.meeting('videoCallPage'),
         'Video call',
         UI.icons.iconBase + 'noun_260227.svg'
       )
-      kb.add(tool, ns.project('view'), 'iframe', projectDoc)
+      kb.add(tool, ns.meeting('view'), 'iframe', projectDoc)
       saveBackProjectDoc()
     }
 
@@ -711,7 +661,7 @@ module.exports = {
             UI.utils.label(target),
             null
           )
-          kb.add(tool, ns.project('view'), 'iframe', projectDoc)
+          kb.add(tool, ns.meeting('view'), 'iframe', projectDoc)
           saveBackProjectDoc()
         })
         .catch(function (e) {
@@ -737,7 +687,7 @@ module.exports = {
         'Sharing',
         UI.icons.iconBase + 'noun_123691.svg'
       )
-      kb.add(tool, ns.project('view'), 'sharing', projectDoc)
+      kb.add(tool, ns.meeting('view'), 'sharing', projectDoc)
       saveBackProjectDoc()
     }
 
@@ -926,14 +876,14 @@ module.exports = {
     // //////////////////////////////
 
     var renderTab = function (div, item) {
-      if (kb.holds(item, ns.rdf('type'), ns.project('Tool'))) {
-        var target = kb.any(item, ns.project('target'))
+      if (kb.holds(item, ns.rdf('type'), ns.meeting('Tool'))) {
+        var target = kb.any(item, ns.meeting('target'))
         var label = kb.any(item, ns.rdfs('label'))
         label = label ? label.value : UI.utils.label(target)
         var s = div.appendChild(dom.createElement('div'))
         s.textContent = label
         s.setAttribute('style', 'margin-left: 0.7em')
-        var icon = kb.any(item, ns.project('icon'))
+        var icon = kb.any(item, ns.meeting('icon'))
         if (icon) {
           // Make sure the icon is cleanly on the left of the label
           var table = div.appendChild(dom.createElement('table'))
@@ -968,7 +918,7 @@ module.exports = {
       containerDiv.style += 'border-color: #eed;'
       containerDiv.appendChild(dom.createElement('h3')).textContent =
         'Adjust this tab'
-      if (kb.holds(subject, ns.rdf('type'), ns.project('Tool'))) {
+      if (kb.holds(subject, ns.rdf('type'), ns.meeting('Tool'))) {
         var form = $rdf.sym(
           'https://solid.github.io/solid-panes/project/projectDetailsForm.ttl#settings'
         )
@@ -986,14 +936,14 @@ module.exports = {
           containerDiv,
           'tab',
           function () {
-            var toolList = kb.the(project, ns.project('toolList'))
+            var toolList = kb.the(project, ns.meeting('toolList'))
             for (var i = 0; i < toolList.elements.length; i++) {
               if (toolList.elements[i].sameTerm(subject)) {
                 toolList.elements.splice(i, 1)
                 break
               }
             }
-            var target = kb.any(subject, ns.project('target'))
+            var target = kb.any(subject, ns.meeting('target'))
             var ds = kb
               .statementsMatching(subject)
               .concat(kb.statementsMatching(undefined, undefined, subject))
@@ -1054,7 +1004,7 @@ module.exports = {
           var toIns = [
             $rdf.st(
               project,
-              ns.project('particpantGroup'),
+              ns.meeting('particpantGroup'),
               group,
               project.doc()
             )
@@ -1067,7 +1017,7 @@ module.exports = {
             }
           })
         }
-        selectedGroup = kb.any(project, ns.project('particpantGroup'))
+        selectedGroup = kb.any(project, ns.meeting('particpantGroup'))
 
         UI.authn.loadTypeIndexes(context).then(function () {
           // Assumes that the type index has an entry for addressbook
@@ -1117,7 +1067,7 @@ module.exports = {
           dom: dom
         }
         UI.authn
-          .registrationControl(context, project, ns.project('Project'))
+          .registrationControl(context, project, ns.meeting('Project'))
           .then(function (_context) {
             console.log('Registration control finsished.')
           })
@@ -1150,13 +1100,13 @@ module.exports = {
         fork.setAttribute('style', imageStyle + 'opacity: 50%;')
       }
 
-      if (kb.holds(subject, ns.rdf('type'), ns.project('Tool'))) {
-        var target = kb.any(subject, ns.project('target'))
-        if (target.sameTerm(project) && !kb.any(subject, ns.project('view'))) {
+      if (kb.holds(subject, ns.rdf('type'), ns.meeting('Tool'))) {
+        var target = kb.any(subject, ns.meeting('target'))
+        if (target.sameTerm(project) && !kb.any(subject, ns.meeting('view'))) {
           // self reference? force details form
           renderDetails() // Legacy project instances
         } else {
-          var view = kb.any(subject, ns.project('view'))
+          var view = kb.any(subject, ns.meeting('view'))
           view = view ? view.value : null
           if (view === 'details') {
             renderDetails()
@@ -1180,8 +1130,8 @@ module.exports = {
         renderDetails()
       } else if (
         subject.sameTerm(subject.doc()) &&
-        !kb.holds(subject, UI.ns.rdf('type'), UI.ns.project('Chat')) &&
-        !kb.holds(subject, UI.ns.rdf('type'), UI.ns.project('PaneView'))
+        !kb.holds(subject, UI.ns.rdf('type'), UI.ns.meeting('Chat')) &&
+        !kb.holds(subject, UI.ns.rdf('type'), UI.ns.meeting('PaneView'))
       ) {
       } else {
         table = containerDiv.appendChild(dom.createElement('table'))
@@ -1192,7 +1142,7 @@ module.exports = {
     }
 
     var options = { dom: dom }
-    options.predicate = ns.project('toolList')
+    options.predicate = ns.meeting('toolList')
     options.subject = subject
     options.ordered = true
     options.orientation = 1 // tabs on Left

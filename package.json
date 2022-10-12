@@ -43,8 +43,8 @@
   "homepage": "https://github.com/solid/project-pane/",
   "dependencies": {
     "contacts-pane": "^2.4.7",
-    "pane-registry": "^2.0.1",
-    "rdflib": "^1.1.0",
+    "pane-registry": "^2.4.12",
+    "rdflib": "^2.2.20",
     "solid-ui": "^2.0.0"
   },
   "devDependencies": {
